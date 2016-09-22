@@ -108,7 +108,7 @@ class MyPlainTextEdit(QtWidgets.QPlainTextEdit):
                 if currentfiletypewas != self.completer.currentfiletype:
                     self.completer.changeModel(self.completer.currentfiletype)
 
-                print ("at:" + str(cursorposition) + " in length:" + str(len(thisdocument)))
+                #print ("at:" + str(cursorposition) + " in length:" + str(len(thisdocument)))
                 eow = """~!@#$%^&*()_+{}|:\"<>?,./;'[]\\-="""  # end of word
                 # has modifier is true if the key has a modifier (and false if no modifier)
                 completionPrefix = self.textUnderCursor()
@@ -146,7 +146,39 @@ class MyPlainTextEdit(QtWidgets.QPlainTextEdit):
                     QtCore.Qt.Key_Backtab):
                 event.ignore()
                 return
-
+        currentfiletypewas = self.completer.currentfiletype
+        thiscursor = self.textCursor()
+        thisdocument = self.toPlainText()
+        cursorposition = thiscursor.position()
+        foundplace = False
+        if cursorposition > 0:
+            poke = cursorposition - 1
+            while not foundplace and poke > -1:
+                if thisdocument[poke] == ">":
+                    self.completer.currentfiletype = ""
+                    return
+                elif thisdocument[poke] == "<":
+                    self.completer.currentfiletype = "urllist"
+                    foundplace = True
+                elif thisdocument[poke] == "}":
+                    self.completer.currentfiletype = ""
+                    return
+                elif thisdocument[poke] == "{":
+                    self.completer.currentfiletype = "venuenamelist"
+                    foundplace = True
+                elif thisdocument[poke] == "]":
+                    self.completer.currentfiletype = ""
+                    return
+                elif thisdocument[poke] == "[":
+                    self.completer.currentfiletype = "bandnamelist"
+                    foundplace = True
+                elif thisdocument[poke] == "/n":
+                    self.completer.currentfiletype = ""
+                    return
+                poke = poke - 1
+            if self.completer.currentfiletype:
+                if currentfiletypewas != self.completer.currentfiletype:
+                    self.completer.changeModel(self.completer.currentfiletype)
         ## has ctrl-G been pressed??
         isShortcut = (
             QtCore.Qt.ControlModifier == event.modifiers() and (event.key() == QtCore.Qt.Key_G))
@@ -889,7 +921,7 @@ class Main(QtWidgets.QMainWindow):
         # PYQT5 Returns a tuple in PyQt5, we only need the filename
 
         exportfilename = QtWidgets.QFileDialog.getSaveFileName(self,
-                        'Save Exported html File',DEFAULTDIRECTORY, "*.htm *.html")[0]
+                        'Save Exported html File',DEFAULTDIRECTORY, "*.rtf")[0]
 
         if exportfilename:
             #exportFilename1 = path.dirname(exportfilename) + "/" +  path.basename(exportfilename) +".htm"
@@ -902,12 +934,14 @@ class Main(QtWidgets.QMainWindow):
 
         codetop = ('<!DOCTYPE html> <html lang="en"> <head> <meta charset="utf-8"> '
                   '<title>Brisbane Live Music Guide</title> </head> <body>')
-        linktop = '<a href="'
-        linkmid = '">'
-        linktail = '</a>'
-        linkfb = linktop + 'http\\1> FB ' + linktail
-        linkv = linktop + 'http\\1> FB ' + linktail
         codetail = '</body></html>'
+
+        linktop = ' <a href="'
+        linkmid = '">'
+        linktail = '</a> '
+        linkfb = linktop + 'http\\1' + linkmid + 'FB' + linktail
+        linkv = linktop + 'http\\1'  + linkmid + 'V' + linktail
+
         newline = '<br > \n'
 
         self.bandrules = copy.deepcopy(self.completer.bigdictionary["bandnamelist"])
@@ -915,8 +949,8 @@ class Main(QtWidgets.QMainWindow):
         exportstring = self.text.toPlainText()
         exportstring = re.sub('\t', ' ', exportstring)
         exportstring = re.sub('\[*\]*\{*\}*<*>*', '', exportstring)
-        exportstring = re.sub(r'http(\S+facebook\.com\S+)\s', r'xxxxtp\1', exportstring)
-        exportstring = re.sub(r'http(\S+)\s', r'yyyytp\1', exportstring)
+        exportstring = re.sub(r'http(\S+facebook\.com\S+)\s', r'xxxxtp\1 ', exportstring)
+        exportstring = re.sub(r'http(\S+)\s', r'yyyytp\1 ', exportstring)
         exportstring = exportstring + " " #ugly but avoids problem with lack of white space at end of file
         exportstring = re.sub(r'xxxxtp(\S+)\s', linkfb, exportstring)
         exportstring = re.sub(r'yyyytp(\S+)\s', linkv, exportstring)
@@ -942,58 +976,40 @@ class Main(QtWidgets.QMainWindow):
         self.exportfinal = codetop + exportstring + codetail
 
     def generateRTF(self):
+        exportstring = re.sub(' +', " ", exportstring)
 
-        codetop = (r"""{\rtf1\ansi\deff3\adeflang1025"""
-r"""{\fonttbl{\f0\froman\fprq2\fcharset0 Times New Roman;}"""
-r"""{\f1\froman\fprq2\fcharset2 Symbol;}{\f2\fswiss\fprq2\fcharset0 Arial;}"""
-r"""{\f3\froman\fprq2\fcharset0 Liberation Serif{\*\falt Times New Roman};}"""
-r"""{\f4\froman\fprq2\fcharset0 Thorndale{\*\falt Times New Roman};}"""
-r"""{\f5\fswiss\fprq2\fcharset0 Albany{\*\falt Arial};}"""
-r"""{\f6\fswiss\fprq0\fcharset0 FreeSans;}}"""
-r"""{\colortbl;\red0\green0\blue0;\red0\green0\blue255;\red0\green255\blue255;"""
-r"""\red0\green255\blue0;\red255\green0\blue255;\red255\green0\blue0;\red255\green255\blue0;"""
-r"""\red255\green255\blue255;\red0\green0\blue128;\red0\green128\blue128;\red0\green128\blue0;"""
-r"""\red128\green0\blue128;\red128\green0\blue0;\red128\green128\blue0;\red128\green128\blue128;"""
-r"""\red192\green192\blue192;\red114\green159\blue207;}"""
-r"""{\s1\sbasedon18\snext19\sb240\sa283\keepn\b\afs44\ab\loch\f4\fs48 Heading 1;}"""
-r"""{\*\cs15\snext15 Endnote Characters;}"""
-r"""{\*\cs16\snext16 Footnote Characters;}"""
-r"""{\*\cs17\snext17\cf9\ul\ulc0 Internet Link;}"""
-r"""{\s18\sbasedon0\snext19\sb240\sa283\keepn\afs26\loch\f5\fs28 Heading;}"""
-r"""{\s19\sbasedon0\snext19\sb0\sa283 Text Body;}"""
-r"""{\s20\sbasedon19\snext20\sb0\sa283\dbch\af6 List;}"""
-r"""{\s21\sbasedon0\snext21\sb120\sa120\noline\i\dbch\af6\afs24\ai\fs24 Caption;}"""
-r"""{\s22\sbasedon0\snext22\noline\dbch\af6 Index;}"""
-r"""{\s23\sbasedon0\snext19\sb0\sa283\brdrb\brdrdb\brdrw7\brdrcf15\brsp0\fs12 Horizontal Line;}"""
-r"""{\s24\sbasedon0\snext24\i Sender;}"""
-r"""{\s25\sbasedon19\snext25\sb0\sa283 Table Contents;}"""
-r"""{\s26\sbasedon0\snext26\tqc\tx4818\tqr\tx9637\noline Footer;}"""
-r"""{\s27\sbasedon0\snext27\tqc\tx4818\tqr\tx9637\noline Header;}"""
-r"""}{\*\generator LibreOffice/5.0.6.2$Linux_X86_64 LibreOffice_project/00m0$Build-2}{\info{\title Brisbane Live Music Guide}{\creatim\yr0\mo0\dy0\hr0\min0}{\revtim\yr0\mo0\dy0\hr0\min0}{\printim\yr0\mo0\dy0\hr0\min0}}\deftab709"""
-r"""\viewscale100"""
-r"""{\*\pgdsctbl"""
-r"""{\pgdsc0\pgdscuse451\pgwsxn11906\pghsxn16838\marglsxn1134\margrsxn1134\margtsxn1134\margbsxn1134\pgdscnxt0 Default Style;}"""
-r"""{\pgdsc1\pgdscuse451\pgndec\pgwsxn11906\pghsxn16838\marglsxn1134\margrsxn1134\margtsxn1134\margbsxn1134\pgdscnxt1 Endnote;}"""
-r"""{\pgdsc2\pgdscuse451\pgndec\pgwsxn11906\pghsxn16838\marglsxn1134\margrsxn567\margtsxn567\margbsxn567\pgdscnxt2 HTML;}}"""
-r"""\formshade{\*\pgdscno2}\paperh16838\paperw11906\margl1134\margr567\margt567\margb567\sectd\sbknone\sectunlocked1\pgndec\pgwsxn11906\pghsxn16838\marglsxn1134\margrsxn567\margtsxn567\margbsxn567\ftnbj\ftnstart1\ftnrstcont\ftnnar\aenddoc\aftnrstcont\aftnstart1\aftnnrlc"""
-r"""{\*\ftnsep\chftnsep}\pgndec\pard\plain \s19\sb0\sa283\sb0\sa283""")
-        linktop = r'''{{\field{\*\fldinst HYPERLINK /"'''
-        linkmid = r'''" }{\fldrslt {\cf9\ul\ulc0\rtlch \ltrch\loch''' + '\n'
-        linktail = r'}{}}}\rtlch \ltrch\loch' '\n'
-        linkfb = linktop + 'http\\1> FB ' + linktail
-        linkv = linktop + 'http\\1> FB ' + linktail
-        codetail = r'} \par }'
-        newline = r'\line '
+        # need to handle special chars (some single quotes?)
+        # double quotes - 2 directions,
+        # backslashes and
+        # hyphen
+
+        codetop = ("{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033\n"
+                   "{\\fonttbl{\\f0\\fnil\\fcharset0 Calibri;}}\n"
+                   "{\\colortbl;\\red0\\green0\\blue0;\\red255\\green0\\blue0;\\red0\\green0\\blue255;}\n"
+                   "{\\f0\\fs22\\cf1")
+        codetail = '}}'
+
+        linktop = '}{\\field{\\*\\fldinst {HYPERLINK "'
+        linkmid = '" }}{\\fldrslt {\\ul\\cf3'
+        linktail = '}}}{\\f0\\fs22\\cf1{ }'
+        linkfb = repr(linktop) + 'http\\1' + repr(linkmid) + 'FB' + repr(linktail)
+        linkfb = linkfb.translate(str.maketrans({"'": None}))
+        linkv = repr(linktop) + 'http\\1' + repr(linkmid) + 'V' + repr(linktail)
+        linkv = linkv.translate(str.maketrans({"'": None}))
+
+        newline = '\\line '
 
         self.bandrules = copy.deepcopy(self.completer.bigdictionary["bandnamelist"])
         self.venuerules = copy.deepcopy(self.completer.bigdictionary["venuenamelist"])
         exportstring = self.text.toPlainText()
         exportstring = re.sub('\t', ' ', exportstring)
         exportstring = re.sub('\[*\]*\{*\}*<*>*', '', exportstring)
-        exportstring = re.sub(r'http(\S+facebook\.com\S+)\s', r'xxxxtp\1', exportstring)
+        exportstring = re.sub(r'http(\S+facebook\.com\S+)\s', r'xxxxtp\1 ', exportstring)
+        exportstring = exportstring + " "  # ugly but avoids problem with lack of white space at end of file
         exportstring = re.sub(r'http(\S+)\s', r'yyyytp\1', exportstring)
         exportstring = exportstring + " " #ugly but avoids problem with lack of white space at end of file
         exportstring = re.sub(r'xxxxtp(\S+)\s', linkfb, exportstring)
+        exportstring = exportstring + " "  # ugly but avoids problem with lack of white space at end of file
         exportstring = re.sub(r'yyyytp(\S+)\s', linkv, exportstring)
 
         for key, value in self.bandrules.items():
@@ -1001,19 +1017,25 @@ r"""{\*\ftnsep\chftnsep}\pgndec\pard\plain \s19\sb0\sa283\sb0\sa283""")
                 bandname = re.compile(key)
             except:
                 print("Whoops compile bandname key failed" + key)
-            subline = linktop + value + linkmid + key + linktail
+            subline = repr(linktop + value + linkmid + key + linktail).translate(str.maketrans({"'":None}))
 
-            exportstring = re.sub(bandname, repr(subline), exportstring)
+
+            exportstring = re.sub(bandname, subline, exportstring)
         for key, value in self.venuerules.items():
             try:
                 venuename = re.compile(key)
             except:
                 print(key)
-            subline = linktop + value + linkmid + key + linktail
+            subline = repr(linktop + value + linkmid + key + linktail).translate(str.maketrans({"'":None}))
 
-            exportstring = re.sub(venuename, repr(subline), exportstring)
+            exportstring = re.sub(venuename, subline, exportstring)
+        # replace all python newline chars with newline expressed in target language
         exportstring = re.sub('\n(\s*)', newline, exportstring)
+        # compress all multiple spaces to single space
         exportstring = re.sub(' +', " ", exportstring)
+        exportstring = re.sub('{ } ', '{ }', exportstring)
+        # replace unicode apostrophes with ascii single quotes - not good in Open Office
+        exportstring = re.sub(chr(8217), "'", exportstring)
         self.exportfinal = codetop + exportstring + codetail
 
     def preview(self):
