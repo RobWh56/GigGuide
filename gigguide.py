@@ -19,11 +19,22 @@ from PyQt5.QtCore import Qt
 from ext import find
 from os import path
 
-DEFAULTDIRECTORY = "/home/jane/Documents/pythontestdata/"
+if sys.platform == 'win32':
+    FILEMARKER = "\\"
+    DEFAULTDIRECTORY = "C:\\Users\\Rob\\PycharmProjects\\GigGuide\\"
+elif sys.platform == 'linux':
+    FILEMARKER = "/"
+    DEFAULTDIRECTORY = "/home/jane/Documents/pythontestdata/"
+else:
+    print ("unknown platorm =" + sys.platform + " currently only setup for windows and linux")
+    sys.exit(app.exec_())
+DEFAULTDICTDIRECTORY = DEFAULTDIRECTORY + "Dictionaries" + FILEMARKER
+DEFAULTGUIDEDIRECTORY = DEFAULTDIRECTORY + "testdata" + FILEMARKER
+DEFAULTEXPORTDIRECTORY = DEFAULTDIRECTORY + "testdata" + FILEMARKER
 
-PREFERENCES = {"bandnamelist": DEFAULTDIRECTORY + "bands_comma_delimited.txt",
-               "venuenamelist": DEFAULTDIRECTORY + "venues_comma_delimited.txt",
-               "urllist": DEFAULTDIRECTORY + "urls_comma_delimited.txt"}
+PREFERENCES = {"bandnamelist": DEFAULTDICTDIRECTORY + "bands_comma_delimited.txt",
+               "venuenamelist": DEFAULTDICTDIRECTORY + "venues_comma_delimited.txt",
+               "urllist": DEFAULTDICTDIRECTORY + "urls_comma_delimited.txt"}
 
 SAVE=1
 DISCARD=2
@@ -976,7 +987,6 @@ class Main(QtWidgets.QMainWindow):
         self.exportfinal = codetop + exportstring + codetail
 
     def generateRTF(self):
-        exportstring = re.sub(' +', " ", exportstring)
 
         # need to handle special chars (some single quotes?)
         # double quotes - 2 directions,
