@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import sys, copy, highlighter, re
+import sys, copy, highlighter, re, os, shutil
 from datetime import datetime, timedelta
 
 # PYQT5 PyQt4’s QtGui module has been split into PyQt5’s QtGui, QtPrintSupport and QtWidgets modules
@@ -13,21 +13,20 @@ from PyQt5 import QtPrintSupport
 # PYQT5 QPrintPreviewDialog, QPrintDialog
 
 from PyQt5 import QtGui, QtCore
-from PyQt5.QtCore import QCoreApplication
 from PyQt5.QtCore import Qt
 
 from ext import find
 from os import path
 
+DEFAULTDIRECTORY = os.getcwd()
 if sys.platform == 'win32':
     FILEMARKER = "\\"
-    DEFAULTDIRECTORY = "C:\\Users\\Rob\\PycharmProjects\\GigGuide\\"
 elif sys.platform == 'linux':
     FILEMARKER = "/"
-    DEFAULTDIRECTORY = "/home/jane/PycharmProjects/GigGuide/"
 else:
     print("unknown platorm =" + sys.platform + " currently only setup for windows and linux")
     sys.exit(app.exec_())
+DEFAULTDIRECTORY = DEFAULTDIRECTORY + FILEMARKER
 DEFAULTDICTDIRECTORY = DEFAULTDIRECTORY + "Dictionaries" + FILEMARKER
 DEFAULTGUIDEDIRECTORY = DEFAULTDIRECTORY + "testdata" + FILEMARKER
 DEFAULTEXPORTDIRECTORY = DEFAULTDIRECTORY + "testdata" + FILEMARKER
@@ -46,16 +45,17 @@ class MyDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
         super(MyDialog, self).__init__(parent)
 
-        self.buttonBox = QtWidgets.QDialogButtonBox(self)
-        self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
-        self.buttonBox.setFixedSize(500, 500)
-        self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Ok)
-        self.buttonBox.setWindowTitle(SYSTEMNAME)
+        #self.buttonBox = QtWidgets.QDialogButtonBox(self)
+        #self.buttonBox.setOrientation(QtCore.Qt.Horizontal)
+        #self.buttonBox.setFixedSize(700, 50)
+        #self.buttonBox.setStandardButtons(QtWidgets.QDialogButtonBox.Ok)
+        #self.buttonBox.setWindowTitle(SYSTEMNAME)
         self.textBrowser = QtWidgets.QTextBrowser(self)
-        self.textBrowser.setFixedSize(300, 300)
+        self.textBrowser.setFixedSize(700, 500)
         self.verticalLayout = QtWidgets.QVBoxLayout(self)
         self.verticalLayout.addWidget(self.textBrowser)
-        self.verticalLayout.addWidget(self.buttonBox)
+        self.setWindowTitle("HTML View equivalent to Export (which is RTF)")
+        #self.verticalLayout.addWidget(self.buttonBox)
 
 
 class MyPlainTextEdit(QtWidgets.QPlainTextEdit):
@@ -93,53 +93,43 @@ class MyPlainTextEdit(QtWidgets.QPlainTextEdit):
         thisdocument = self.toPlainText()
         cursorposition = thiscursor.position()
         foundplace = False
-        if cursorposition > 0:
-            poke = cursorposition - 1
-            while not foundplace and poke > -1:
-                if thisdocument[poke] == ">":
-                    self.completer.currentfiletype = ""
-                    return
-                elif thisdocument[poke] == "<":
-                    self.completer.currentfiletype = "urllist"
-                    foundplace = True
-                elif thisdocument[poke] == "}":
-                    self.completer.currentfiletype = ""
-                    return
-                elif thisdocument[poke] == "{":
-                    self.completer.currentfiletype = "venuenamelist"
-                    foundplace = True
-                elif thisdocument[poke] == "]":
-                    self.completer.currentfiletype = ""
-                    return
-                elif thisdocument[poke] == "[":
-                    self.completer.currentfiletype = "bandnamelist"
-                    foundplace = True
-                elif thisdocument[poke] == "/n":
-                    self.completer.currentfiletype = ""
-                    return
-                poke = poke - 1
-            if self.completer.currentfiletype:
-                if currentfiletypewas != self.completer.currentfiletype:
-                    self.completer.changeModel(self.completer.currentfiletype)
+        poke = cursorposition - 1
+        while not foundplace:
+            if poke == -1:
+                self.completer.currentfiletype = ""
+                return
+            elif thisdocument[poke] in ["/n", ':']:
+                self.completer.currentfiletype = ""
+                return
+            elif thisdocument[poke] == "{":
+                self.completer.currentfiletype = "venuenamelist"
+                foundplace = True
+            elif thisdocument[poke] == "[":
+                self.completer.currentfiletype = "bandnamelist"
+                foundplace = True
+            poke = poke - 1
+        if self.completer.currentfiletype:
+            if currentfiletypewas != self.completer.currentfiletype:
+                self.completer.changeModel(self.completer.currentfiletype)
 
-                # print ("at:" + str(cursorposition) + " in length:" + str(len(thisdocument)))
-                eow = """~!@#$%^&*()_+{}|:\"<>?,./;'[]\\-="""  # end of word
-                # has modifier is true if the key has a modifier (and false if no modifier)
-                completionPrefix = self.textUnderCursor()
+            # print ("at:" + str(cursorposition) + " in length:" + str(len(thisdocument)))
+            eow = """~!@#$%^&*()_+{}|:\"<>?,./;'[]\\-="""  # end of word
+            # has modifier is true if the key has a modifier (and false if no modifier)
+            completionPrefix = self.textUnderCursor()
 
-                # if the word currently under the cursor is different from the search word in the completer
-                # update the search word in the prefix and update the completer popup box contents
-                if (completionPrefix != self.completer.completionPrefix()):
-                    self.completer.setCompletionPrefix(completionPrefix)
-                    popup = self.completer.popup()
-                    popup.setCurrentIndex(
-                        self.completer.completionModel().index(0, 0))
-                # setup a popup box to fit the text offered by the completer
-                cr = self.cursorRect()
-                cr.setWidth(self.completer.popup().sizeHintForColumn(0)
-                            + self.completer.popup().verticalScrollBar().sizeHint().width())
-                # pop it up
-                self.completer.complete(cr)
+            # if the word currently under the cursor is different from the search word in the completer
+            # update the search word in the prefix and update the completer popup box contents
+            if (completionPrefix != self.completer.completionPrefix()):
+                self.completer.setCompletionPrefix(completionPrefix)
+                popup = self.completer.popup()
+                popup.setCurrentIndex(
+                    self.completer.completionModel().index(0, 0))
+            # setup a popup box to fit the text offered by the completer
+            cr = self.cursorRect()
+            cr.setWidth(self.completer.popup().sizeHintForColumn(0)
+                        + self.completer.popup().verticalScrollBar().sizeHint().width())
+            # pop it up
+            self.completer.complete(cr)
 
     def keyPressEvent(self, event):
         # "DEBUG STUFF"
@@ -166,34 +156,26 @@ class MyPlainTextEdit(QtWidgets.QPlainTextEdit):
         thisdocument = self.toPlainText()
         cursorposition = thiscursor.position()
         foundplace = False
-        if cursorposition > 0:
-            poke = cursorposition - 1
-            while not foundplace and poke > -1:
-                if thisdocument[poke] == ">":
-                    self.completer.currentfiletype = ""
-                    return
-                elif thisdocument[poke] == "<":
-                    self.completer.currentfiletype = "urllist"
-                    foundplace = True
-                elif thisdocument[poke] == "}":
-                    self.completer.currentfiletype = ""
-                    return
-                elif thisdocument[poke] == "{":
-                    self.completer.currentfiletype = "venuenamelist"
-                    foundplace = True
-                elif thisdocument[poke] == "]":
-                    self.completer.currentfiletype = ""
-                    return
-                elif thisdocument[poke] == "[":
-                    self.completer.currentfiletype = "bandnamelist"
-                    foundplace = True
-                elif thisdocument[poke] == "/n":
-                    self.completer.currentfiletype = ""
-                    return
-                poke = poke - 1
-            if self.completer.currentfiletype:
-                if currentfiletypewas != self.completer.currentfiletype:
-                    self.completer.changeModel(self.completer.currentfiletype)
+        poke = cursorposition - 1
+        while not foundplace:
+            if poke == -1:
+                self.completer.currentfiletype = ""
+                foundplace = True
+            elif thisdocument[poke] in ["/n", ":"]:
+                self.completer.currentfiletype = ""
+                foundplace = True
+            elif thisdocument[poke] == "{":
+                self.completer.currentfiletype = "venuenamelist"
+                foundplace = True
+            elif thisdocument[poke] == "[":
+                self.completer.currentfiletype = "bandnamelist"
+                foundplace = True
+            poke = poke - 1
+
+
+        if self.completer.currentfiletype:
+            if currentfiletypewas != self.completer.currentfiletype:
+                self.completer.changeModel(self.completer.currentfiletype)
         ## has ctrl-G been pressed??
         isShortcut = (
             QtCore.Qt.ControlModifier == event.modifiers() and (event.key() == QtCore.Qt.Key_G))
@@ -374,16 +356,6 @@ class Main(QtWidgets.QMainWindow):
         self.venueAction.setShortcut("Ctrl+M")
         # self.venueAction.triggered.connect(self.text.changeModel("venuenamelist"))
 
-        self.bandAction = QtWidgets.QAction("Band", self)
-        self.bandAction.setStatusTip("switch to band autocompletion")
-        self.bandAction.setShortcut("Ctrl+N")
-        # self.bandAction.triggered.connect(self.text.changeModel("bandnamelist"))
-
-        # dateTimeAction = QtWidgets.QAction(QtGui.QIcon("icons/calender.png"),"Insert current date/time",self)
-        # dateTimeAction.setStatusTip("Insert current date/time")
-        # dateTimeAction.setShortcut("Ctrl+D")
-        # dateTimeAction.triggered.connect(DateTime(self).show)
-
         wordCountAction = QtWidgets.QAction(QtGui.QIcon("icons/count.png"), "See word/symbol count", self)
         wordCountAction.setStatusTip("See word/symbol count")
         wordCountAction.setShortcut("Ctrl+W")
@@ -393,6 +365,11 @@ class Main(QtWidgets.QMainWindow):
         autocompleteAction.setStatusTip("See word/symbol count")
         autocompleteAction.setShortcut("Ctrl+G")
         autocompleteAction.triggered.connect(self.text.autocomplete)
+
+        self.addUrlAction = QtWidgets.QAction("add url...", self)
+        self.addUrlAction.setStatusTip("Add band url to selected band name")
+        self.addUrlAction.setShortcut("Ctrl+K")
+        self.addUrlAction.triggered.connect(self.addUrl)
 
         # tableAction = QtWidgets.QAction(QtGui.QIcon("icons/table.png"),"Insert table",self)
         # tableAction.setStatusTip("Insert table")
@@ -442,6 +419,7 @@ class Main(QtWidgets.QMainWindow):
         # self.toolbar.addAction(dateTimeAction)
         self.toolbar.addAction(wordCountAction)
         self.toolbar.addAction(autocompleteAction)
+        self.toolbar.addAction(self.addUrlAction)
 
         # self.toolbar.addAction(tableAction)
         # self.toolbar.addAction(imageAction)
@@ -567,6 +545,7 @@ class Main(QtWidgets.QMainWindow):
         edit.addAction(self.copyAction)
         edit.addAction(self.pasteAction)
         edit.addAction(self.findAction)
+        edit.addAction(self.addUrlAction)
 
         # Toggling actions for the various bars
         toolbarAction = QtWidgets.QAction("Toggle Toolbar", self)
@@ -816,6 +795,7 @@ class Main(QtWidgets.QMainWindow):
         # Insert a new row at the cell's position
         table.insertColumns(cell.column(), 1)
 
+
     def toggleToolbar(self):
 
         state = self.toolbar.isVisible()
@@ -857,11 +837,13 @@ class Main(QtWidgets.QMainWindow):
         for i in range(0, 7):
             idate = nextWednesday + timedelta(days=i)
             self.text.insertPlainText(idate.strftime("%A %d %B\n"))
-            self.text.insertPlainText("[                    ] {                     } <                  >\n")
-            self.text.insertPlainText("[                    ] {                     } <                  >\n")
-            self.text.insertPlainText("[                    ] {                     } <                  >\n")
-            self.text.insertPlainText("[                    ] {                     } <                  >\n")
-            self.text.insertPlainText("[                    ] {                     } <                  >")
+            self.text.insertPlainText("[                      {                         :                     \n")
+            self.text.insertPlainText("[                      {                         :                     \n")
+            self.text.insertPlainText("[                      {                         :                     \n")
+            self.text.insertPlainText("[                      {                         :                     \n")
+            self.text.insertPlainText("[                      {                         :                     \n")
+            self.text.insertPlainText("[                      {                         :                     \n")
+
 
             # avoid pesky carriage return at end of document
             if i < 6:
@@ -945,6 +927,20 @@ class Main(QtWidgets.QMainWindow):
                 # file.write(self.text.toHtml())
                 file.write(self.exportfinal)
 
+    def preview(self):
+        self.generateHTML()
+        self.previewTextBrowser.textBrowser.setHtml(self.exportfinal)
+        self.previewTextBrowser.show()
+
+        print("BROWSED " + self.exportfinal)
+        # Open preview dialog
+        # preview = QtPrintSupport.QPrintPreviewDialog()
+
+        # If a print is requested, open print dialog
+        # preview.paintRequested.connect(lambda p: self.text.print_(p))
+
+        # preview.exec_()
+
     def generateHTML(self):
 
         codetop = ('<!DOCTYPE html> <html lang="en"> <head> <meta charset="utf-8"> '
@@ -963,7 +959,7 @@ class Main(QtWidgets.QMainWindow):
         self.venuerules = copy.deepcopy(self.completer.bigdictionary["venuenamelist"])
         exportstring = self.text.toPlainText()
         exportstring = re.sub('\t', ' ', exportstring)
-        exportstring = re.sub('\[*\]*\{*\}*<*>*', '', exportstring)
+        exportstring = re.sub('\[*\{*', '', exportstring)
         exportstring = re.sub(r'http(\S+facebook\.com\S+)\s', r'xxxxtp\1 ', exportstring)
         exportstring = re.sub(r'http(\S+)\s', r'yyyytp\1 ', exportstring)
         exportstring = exportstring + " "  # ugly but avoids problem with lack of white space at end of file
@@ -988,6 +984,9 @@ class Main(QtWidgets.QMainWindow):
             exportstring = re.sub(venuename, subline, exportstring)
         exportstring = re.sub('\n(\s*)', newline, exportstring)
         exportstring = re.sub(' +', " ", exportstring)
+        exportstring = re.sub(' :', ':', exportstring)
+        exportstring = re.sub('\n: <br >', '', exportstring)
+
         self.exportfinal = codetop + exportstring + codetail
 
     def generateRTF(self):
@@ -1011,7 +1010,7 @@ class Main(QtWidgets.QMainWindow):
         linkv = repr(linktop) + 'http\\1' + repr(linkmid) + 'V' + repr(linktail)
         linkv = linkv.translate(str.maketrans({"'": None}))
 
-        newline = '\\line '
+        newline = '\\line \n'
 
         self.bandrules = copy.deepcopy(self.completer.bigdictionary["bandnamelist"])
         self.venuerules = copy.deepcopy(self.completer.bigdictionary["venuenamelist"])
@@ -1049,21 +1048,9 @@ class Main(QtWidgets.QMainWindow):
         exportstring = re.sub('{ } ', '{ }', exportstring)
         # replace unicode apostrophes with ascii single quotes - not good in Open Office
         exportstring = re.sub(chr(8217), "'", exportstring)
+        exportstring = re.sub('\n: \\\\line ', '', exportstring)
         self.exportfinal = codetop + exportstring + codetail
 
-    def preview(self):
-        self.generateHTML()
-        self.previewTextBrowser.textBrowser.setHtml(self.exportfinal)
-        self.previewTextBrowser.exec_()
-
-        print("BROWSED " + self.exportfinal)
-        # Open preview dialog
-        # preview = QtPrintSupport.QPrintPreviewDialog()
-
-        # If a print is requested, open print dialog
-        # preview.paintRequested.connect(lambda p: self.text.print_(p))
-
-        # preview.exec_()
 
     def printHandler(self):
 
@@ -1088,6 +1075,69 @@ class Main(QtWidgets.QMainWindow):
         self.statusbar.showMessage("Line: {} | Column: {}  {}  {}".format(line, col, cs, self.statusbarmsg))
         self.statusbarmsg = ""
         return False
+
+    def addUrl(self):
+        thisdocument = self.text.toPlainText()
+        thiscursor = self.text.textCursor()
+        selectionstart = thiscursor.selectionStart()
+        thisselection = thisdocument[selectionstart: thiscursor.selectionEnd()]
+        thisselection = re.sub(',','_',thisselection)
+        thisselection = re.sub('\n',' ',thisselection)
+
+        poke = selectionstart - 1
+        foundplace = False
+        while not foundplace:
+            if poke == -1:
+                self.completer.currentfiletype = ""
+                foundplace = True
+            elif thisdocument[poke] in ["/n", ':']:
+                self.completer.currentfiletype = ""
+                foundplace = True
+            elif thisdocument[poke] == "{":
+                self.completer.currentfiletype = "venuenamelist"
+                foundplace = True
+            elif thisdocument[poke] == "[":
+                self.completer.currentfiletype = "bandnamelist"
+                foundplace = True
+            poke = poke - 1
+
+        if not self.completer.currentfiletype:
+            QtWidgets.QMessageBox.information(None, 'Hint', "Hmmm, can't add a url here!" )
+        else:
+            thisurl, ok = QtWidgets.QInputDialog.getText(self, "Type url for this band", thisselection , QtWidgets.QLineEdit.Normal, "http://")
+
+            if ok:
+                thisurl = re.sub(',', '_', thisurl)
+                thisurl = re.sub('\n', ' ', thisurl)
+                dt = datetime.now()
+                timestamp = dt.strftime("%Y%m%d%H%M%S")
+                currentfilepath = PREFERENCES[self.completer.currentfiletype]
+                backupfilepath = currentfilepath[:-4] + timestamp + '.txt'
+                print(currentfilepath)
+                print(backupfilepath)
+                #find pathname for band dictionary
+                try:
+                    shutil.copyfile(currentfilepath, backupfilepath)
+                except IOError:
+                    QtWidgets.QMessageBox.information(None, 'Whoops', "Hmmm, adding url failed - file backup didn't work")
+                else:
+                    try:
+                        with open(currentfilepath, "a") as dictfile:
+                            dictfile.write('\n' + thisselection + ',' + thisurl)
+                        self.completer.bigdictionary[self.completer.currentfiletype][thisselection] = thisurl
+                        self.completer.words[self.completer.currentfiletype].append(thisselection)
+                        self.completer.changeModel(self.completer.currentfiletype)
+                        self.myHighlighter.addHighlightRule(thisselection,self.completer.currentfiletype)
+
+                    except IOError:
+                        QtWidgets.QMessageBox.information(None, 'Whoops', "Hmmm, adding url failed - file append didn't work")
+
+
+
+
+
+
+
 
     def wordCount(self):
 

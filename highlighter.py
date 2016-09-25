@@ -23,31 +23,25 @@ class Highlighter(QtGui.QSyntaxHighlighter):
 
         bandrules = completer.bigdictionary["bandnamelist"]
         for key, value in bandrules.items():
-            bandrule = HighlightingRule()
-            bandruleformat = QtGui.QTextCharFormat()
-            bandruleformat.setForeground(QtCore.Qt.blue)
-            bandruleformat.setFontWeight(QtGui.QFont.Normal)
-            bandrule.format = bandruleformat
-            print(key)
-            try:
-                bandrule.pattern = re.compile(key)
-            except:
-                print(key)
-            self.highlightingRules.append(bandrule)
+            self.addHighlightRule(key, "bandnamelist")
 
         venuerules = completer.bigdictionary["venuenamelist"]
         for key, value in venuerules.items():
-            venuerule = HighlightingRule()
-            venueruleformat = QtGui.QTextCharFormat()
-            venueruleformat.setForeground(QtCore.Qt.magenta)
-            venueruleformat.setFontWeight(QtGui.QFont.Normal)
-            venuerule.format = venueruleformat
-            print(key)
-            try:
-                venuerule.pattern = re.compile(key)
-            except:
-                print(key)
-            self.highlightingRules.append(venuerule)
+            self.addHighlightRule(key, "venuenamelist")
+
+
+    def addHighlightRule(self, key, ruletype):
+        if ruletype == "bandnamelist":
+            colour = QtCore.Qt.blue
+        elif ruletype == "venuenamelist":
+            colour = QtCore.Qt.magenta
+        newrule = HighlightingRule()
+        newruleformat = QtGui.QTextCharFormat()
+        newruleformat.setForeground(colour)
+        newruleformat.setFontWeight(QtGui.QFont.Normal)
+        newrule.format = newruleformat
+        newrule.pattern = re.compile(key)
+        self.highlightingRules.append(newrule)
 
 
     def highlightBlock(self, text):
